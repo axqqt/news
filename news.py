@@ -79,24 +79,45 @@ def fetch_forexfactory_news():
 def send_notification(news_items):
     try:
         print("Preparing notification message...")
-        message = "Daily Forex News (Red & Orange Folders):\n\n"
+        
+        # Start the message with a title and emoji for better visibility
+        message = "**📊 Forex News Summary (Red & Orange Folders)**\n\n"
+        
+        # Loop through each news item and format it nicely
         for item in news_items:
-            message += f"**Time (IST):** {item['time']}\n"
-            message += f"**Currency:** {item['currency']}\n"
-            message += f"**Event:** {item['event']}\n"
-            message += f"**Impact:** {item['impact']}\n"
-            message += "-" * 30 + "\n"
-
+            # Use emojis to indicate impact level
+            if item['impact'] == 'High Impact Expected':
+                impact_emoji = "🔴"  # Red circle for high impact
+            elif item['impact'] == 'Moderate Impact Expected':
+                impact_emoji = "🟠"  # Orange circle for moderate impact
+            else:
+                impact_emoji = "⚪"  # White circle for low or unknown impact
+            
+            # Format each news item with Markdown
+            message += f"**⏰ Time (IST):** `{item['time']}`\n"
+            message += f"**💵 Currency:** `{item['currency']}`\n"
+            message += f"**📋 Event:** `{item['event']}`\n"
+            message += f"**💥 Impact:** {impact_emoji} `{item['impact']}`\n"
+            message += "\n" + "-" * 30 + "\n"  # Add a separator between items
+        
+        # Add a footer with the current date
+        current_date = datetime.now(pytz.timezone('Asia/Kolkata')).strftime('%Y-%m-%d')
+        message += f"\n*📅 Last Updated: {current_date} IST*"
+        
+        # Prepare the payload for the webhook
         payload = {
             'content': message
         }
-
+        
         print("Sending notification via webhook...")
         response = requests.post(WEBHOOK_URL, json=payload)
+        
+        # Check if the notification was sent successfully
         if response.status_code == 204:
             print("Notification sent successfully!")
         else:
             print(f"Failed to send notification. Status code: {response.status_code}, Response: {response.text}")
+    
     except Exception as e:
         print(f"Error sending notification: {e}")
 
