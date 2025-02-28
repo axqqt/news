@@ -9,33 +9,36 @@ import time
 WEBHOOK_URL = "https://discord.com/api/webhooks/1339950091120676977/bF_tkDbK8piAaiibeb-RlUAgP4iZPyVcJsqOhJzHIE8rrH3pobmWBzlZs7TFPTi0_6ne"
 
 # Function to convert time from NYT to IST
+
+
 def convert_nyt_to_ist(nyt_time_str):
     try:
         nyt_tz = pytz.timezone('America/New_York')
         ist_tz = pytz.timezone('Asia/Kolkata')
-
-        # Get today's date in NYT timezone
         today_nyt = datetime.now(nyt_tz).date()
 
-        # Parse the NYT time string into a datetime object
         if nyt_time_str.lower() == 'all day':
-            nyt_time = datetime(today_nyt.year, today_nyt.month, today_nyt.day, 0, 0)
+            nyt_time = datetime(
+                today_nyt.year, today_nyt.month, today_nyt.day, 0, 0)
+        elif nyt_time_str.strip() == '':
+            nyt_time = datetime(
+                today_nyt.year, today_nyt.month, today_nyt.day, 0, 0)
         else:
             nyt_time = datetime.strptime(nyt_time_str, '%I:%M%p').time()
             nyt_time = datetime.combine(today_nyt, nyt_time)
 
-        # Localize the time to NYT timezone
         nyt_time = nyt_tz.localize(nyt_time)
-
-        # Convert to IST
         ist_time = nyt_time.astimezone(ist_tz)
-        print(f"Converted time: {nyt_time_str} NYT -> {ist_time.strftime('%I:%M %p')} IST")
+        print(
+            f"Converted time: {nyt_time_str} NYT -> {ist_time.strftime('%I:%M %p')} IST")
         return ist_time.strftime('%I:%M %p')
     except Exception as e:
         print(f"Error converting time: {e}")
-        return None
+        return "N/A"
 
 # Function to fetch and filter ForexFactory news
+
+
 def fetch_forexfactory_news():
     try:
         url = "https://www.forexfactory.com/calendar"
@@ -51,6 +54,7 @@ def fetch_forexfactory_news():
         rows = soup.select('.calendar__row.calendar_row')
         print(f"Found {len(rows)} rows in the calendar.")
         filtered_news = []
+
         for row in rows:
             try:
                 impact_icon = row.select_one('.impact__icon')
@@ -58,7 +62,8 @@ def fetch_forexfactory_news():
                     time_element = row.select_one('.calendar__time.time')
                     time_str = time_element.text.strip() if time_element else '12:00am'
                     currency = row.select_one('.currency').text.strip()
-                    event = row.select_one('.calendar__event-title.event').text.strip()
+                    event = row.select_one(
+                        '.calendar__event-title.event').text.strip()
                     impact = impact_icon['title']
 
                     # Convert time to IST
@@ -71,9 +76,13 @@ def fetch_forexfactory_news():
                         'event': event,
                         'impact': impact
                     })
-                    print(f"Filtered news: {ist_time} - {currency} - {event} - {impact}")
+                    print(
+                        f"Filtered news: {ist_time} - {currency} - {event} - {impact}")
+                else:
+                    print(f"Ignored news due to low impact or missing data.")
             except Exception as e:
                 print(f"Error processing row: {e}")
+
         print(f"Filtered {len(filtered_news)} relevant news items.")
         return filtered_news
     except Exception as e:
@@ -81,13 +90,13 @@ def fetch_forexfactory_news():
         return []
 
 # Function to send notification via webhook
+
+
 def send_notification(news_items):
     try:
         print("Preparing notification message...")
-
         # Start the message with a title and emoji for better visibility
         message = "**📊 Forex News Summary (Red & Orange Folders)**\n\n"
-
         # Loop through each news item and format it nicely
         for item in news_items:
             # Use emojis to indicate impact level
@@ -106,14 +115,14 @@ def send_notification(news_items):
             message += "\n" + "-" * 30 + "\n"  # Add a separator between items
 
         # Add a footer with the current date
-        current_date = datetime.now(pytz.timezone('Asia/Kolkata')).strftime('%Y-%m-%d')
+        current_date = datetime.now(pytz.timezone(
+            'Asia/Kolkata')).strftime('%Y-%m-%d')
         message += f"\n*📅 Last Updated: {current_date} IST*"
 
         # Prepare the payload for the webhook
         payload = {
             'content': message
         }
-
         print("Sending notification via webhook...")
         response = requests.post(WEBHOOK_URL, json=payload)
 
@@ -121,12 +130,14 @@ def send_notification(news_items):
         if response.status_code == 204:
             print("Notification sent successfully!")
         else:
-            print(f"Failed to send notification. Status code: {response.status_code}, Response: {response.text}")
-
+            print(
+                f"Failed to send notification. Status code: {response.status_code}, Response: {response.text}")
     except Exception as e:
         print(f"Error sending notification: {e}")
 
 # Main function to run the script
+
+
 def job():
     print("\n--- Starting job ---")
     print("Fetching ForexFactory news...")
@@ -139,12 +150,24 @@ def job():
     print("--- Job completed ---\n")
 
 # Schedule the job to run daily at midnight NYT
+
+
 def run_scheduler():
     print("Scheduler started. Waiting for the next job execution...")
-    schedule.every().day.at("00:00").do(job)
+    ny_tz = pytz.timezone('America/New_York')
+    schedule.every().day.at("00:00", tz=ny_tz).do(job)  # Specify the time zone
+
     while True:
+        print("Checking for pending jobs...")
         schedule.run_pending()
         time.sleep(1)
 
+
 if __name__ == "__main__":
+    # Test the webhook manually (uncomment the following lines to test)
+    # payload = {"content": "Test message from the script!"}
+    # response = requests.post(WEBHOOK_URL, json=payload)
+    # print(response.status_code, response.text)
+
+    # Run the scheduler
     run_scheduler()
