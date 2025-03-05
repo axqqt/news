@@ -138,12 +138,15 @@ def job():
 def run_scheduler():
     print("Scheduler started. Waiting for the next job execution...")
     ist_tz = pytz.timezone('Asia/Kolkata')  # Use IST timezone
-    schedule.every().day.at("00:00", tz=ist_tz).do(job)  # Run at midnight IST
 
     while True:
-        print("Checking for pending jobs...")
-        schedule.run_pending()
-        time.sleep(1)
+        now = datetime.now(ist_tz)
+        if now.hour == 0 and now.minute == 0:  # Run at midnight IST
+            job()
+            time.sleep(60)  # Sleep for 60 seconds to avoid running multiple times in the same minute
+        else:
+            print("Checking for pending jobs...")
+            time.sleep(1)
 
 if __name__ == "__main__":
     # Test the webhook manually (uncomment the following lines to test)
